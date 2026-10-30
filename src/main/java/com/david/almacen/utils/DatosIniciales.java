@@ -1,8 +1,11 @@
 package com.david.almacen.utils;
 
+import com.david.almacen.entities.DetalleVenta;
 import com.david.almacen.entities.Producto;
 import com.david.almacen.entities.Sucursal;
+import com.david.almacen.entities.Venta;
 import com.david.almacen.enums.Categoria;
+import com.david.almacen.enums.EstadoVenta;
 import com.david.almacen.repositories.ProductoRepository;
 import com.david.almacen.repositories.SucursalRepository;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +14,9 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Component
@@ -19,6 +25,7 @@ import java.util.List;
 public class DatosIniciales implements CommandLineRunner {
     private final ProductoRepository productoRepository;
     private final SucursalRepository sucursalRepository;
+    private final SucursalRepository ventaRepository;
     @Override
     public  void run(String ...args) throws Exception{
         if(productoRepository.count()==0){

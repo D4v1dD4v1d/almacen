@@ -17,7 +17,7 @@ public enum Categoria {
     FARMACIA("Farmacia");
     private final String descripcion;
     public static Categoria obtenerCategoriaPorDescripcion(String descripcion){
-        StringCustomUtils.validarNoVacio(descripcion,"La descripción es requerida");
+        StringCustomUtils.validarNoVacio(descripcion,"La descripción es requerida, no puede ser vacía");
         String descripcionNormalizada = StringCustomUtils.normalizarTexto(descripcion);
         for (Categoria categoria : values()){
             if(StringCustomUtils.normalizarTexto(categoria.descripcion).equalsIgnoreCase(descripcionNormalizada))
