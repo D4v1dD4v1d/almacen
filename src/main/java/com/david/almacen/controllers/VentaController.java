@@ -51,7 +51,6 @@ public class VentaController {
     @GetMapping("/reportes")
     @Operation(summary = "Obtener un listado de los reportes de cada sucursal")
     @ApiResponse(responseCode = "200",description = "Reportes realizados.")
-
     public ResponseEntity<List<ReporteVentasSucursalResponse>> obtenerReportePorSucursal(){
         return ResponseEntity.ok(ventaService.reporteVentas());
     }

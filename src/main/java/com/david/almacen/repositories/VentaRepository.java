@@ -17,13 +17,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface VentaRepository extends JpaRepository<Venta,Long> {
-    // Con esta consulta en venta traemos las ventas que estan con estado REGISTRADA enteros de ventas, detalles de venta y sucursal
-    @Query("SELECT DISTINCT v FROM Venta v LEFT JOIN FETCH v.sucursal LEFT JOIN FETCH v.detalleVentas WHERE v.estadoVenta = REGISTRADA")
-    List<Venta> findAllConRelacionesRegistrada();
-    // Con esta consulta en venta traemos las ventas que estan con estado CANCELADA enteros de ventas, detalles de venta y sucursal
-    @Query("SELECT DISTINCT v FROM Venta v LEFT JOIN FETCH v.sucursal LEFT JOIN FETCH v.detalleVentas WHERE v.estadoVenta = CANCELADA")
-    List<Venta> findAllConRelacionesCancelada();
-
     @Query("""
         SELECT new com.david.almacen.dto.ventas.ReporteVentasSucursalResponse(
             s.id,

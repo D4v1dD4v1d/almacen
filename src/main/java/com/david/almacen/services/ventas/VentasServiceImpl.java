@@ -50,24 +50,17 @@ public class VentasServiceImpl implements VentaService {
     @Override
     public List<VentaResponse> listarRegistradas() {
         log.info("Listando ventas...");
-        //Se traen las ventas con sus relaciones
-        List<Venta> ventas = ventaRepository.findAllConRelacionesRegistrada();
-
+        List<Venta> ventas = ventaRepository.findAll().stream().
+                filter(venta -> venta.getEstadoVenta().equals(EstadoVenta.REGISTRADA))
+                .toList();
         log.info("Ventas encontradas");
         return ventas.stream().
                 map(venta ->
                         ventaMapper.entidadAResponse(
                                 venta,
                                 sucursalMapper.entidadAResponse(venta.getSucursal()),
-                                venta.getDetalleVentas().stream()
-                                        .map(detalle -> detalleVentaMapper.entidadAResponse(
-                                                detalle,
-                                                detalle.getProducto()
-                                        ))
-                                        .toList(),
-                                venta.getDetalleVentas().stream()
-                                        .map(DetalleVenta::calcularSubtotal)
-                                        .reduce(BigDecimal.ZERO, BigDecimal::add)
+                                listaDetalleVentaResponse(venta.getDetalleVentas()),
+                                calcularTotal(venta.getDetalleVentas())
                         )).toList();
     }
 
@@ -75,23 +68,17 @@ public class VentasServiceImpl implements VentaService {
     @Override
     public List<VentaResponse> listarCanceladas() {
         log.info("Listando ventas canceladas...");
-        //Se traen las ventas con sus relaciones
-        List<Venta> ventas = ventaRepository.findAllConRelacionesCancelada();
+        List<Venta> ventas = ventaRepository.findAll().stream().
+                filter(venta -> venta.getEstadoVenta().equals(EstadoVenta.CANCELADA))
+                .toList();
         log.info("Ventas canceladas encontradas");
         return ventas.stream().
                 map(venta ->
                         ventaMapper.entidadAResponse(
                                 venta,
                                 sucursalMapper.entidadAResponse(venta.getSucursal()),
-                                venta.getDetalleVentas().stream()
-                                        .map(detalle -> detalleVentaMapper.entidadAResponse(
-                                                detalle,
-                                                detalle.getProducto()
-                                        ))
-                                        .toList(),
-                                venta.getDetalleVentas().stream()
-                                        .map(DetalleVenta::calcularSubtotal)
-                                        .reduce(BigDecimal.ZERO, BigDecimal::add)
+                                listaDetalleVentaResponse(venta.getDetalleVentas()),
+                                calcularTotal(venta.getDetalleVentas())
                         )).toList();
 
     }
@@ -99,22 +86,14 @@ public class VentasServiceImpl implements VentaService {
     @Override
     public VentaResponse obtenerPorId(Long id) {
         log.info("Buscando venta con ID: {}", id);
-
         Venta venta = ventaRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Venta no encontrada con ID: " + id));
         log.info("Venta encontrada con ID: {}",id);
         return ventaMapper.entidadAResponse(
                 venta,
                 sucursalMapper.entidadAResponse(venta.getSucursal()),
-                venta.getDetalleVentas().stream()
-                        .map(detalle -> detalleVentaMapper.entidadAResponse(
-                                detalle,
-                                detalle.getProducto()
-                        ))
-                        .toList(),
-                venta.getDetalleVentas().stream()
-                        .map(DetalleVenta::calcularSubtotal)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add)
+                listaDetalleVentaResponse(venta.getDetalleVentas()),
+                calcularTotal(venta.getDetalleVentas())
         );
 
     }
@@ -125,50 +104,54 @@ public class VentasServiceImpl implements VentaService {
         log.info("Obteniendo sucursal...");
         Sucursal sucursal = sucursalRepository.findById(request.idSucursal())
                 .orElseThrow(() -> new RecursoNoEncontradoException("La sucursal no se encuentra, id: " + request.idSucursal()));
+        log.info("Sucursal obtenida.");
         //creo una venta temporal para ir agregando sus detalles
-        Venta ventaTemporal = new Venta();
+
         //creo una lista de detalles si algun detalle trae un producto que no exista se lanza la excepcion
         log.info("Obteniendo detalles...");
         List<DetalleVenta> detalles = request.productos().stream()
                 .map(detalleRequest -> {
                     Producto producto = productoRepository.findById(detalleRequest.idProducto())
                             .orElseThrow(() -> new RecursoNoEncontradoException("Producto no encontrado con ID: " + detalleRequest.idProducto()));
+
                     if(producto.getCantidad()<detalleRequest.cantidadProducto())
                         throw new ConflictoException("No hay suficientes "+producto.getNombre()+" en el inventario, venta cancelada.");
                     producto.descontarCantidad(detalleRequest.cantidadProducto());
+
                     return detalleVentaMapper.requestAEntidad(
-                            ventaTemporal,
+                            new Venta(),
                             producto,
                             detalleRequest.cantidadProducto()
                     );
                 })
                 .collect(Collectors.toList());
         //creo mi venta
+        log.info("Detalles obtenidos.");
         log.info("Creando Venta...");
-        Venta venta = Venta.crear(sucursal, detalles);
+
+         Venta venta = Venta.crear(sucursal, detalles);
+
         //un foreach para los detalles para ir agregando de uno en uno
         detalles.forEach(venta::agregarDetalle);
+
         //inserto los cambios en la base de datos
-        venta = ventaRepository.saveAndFlush(venta);
+        Venta ventaGuardada = ventaRepository.saveAndFlush(venta);
+
         log.info("Venta realizada con exito!!");
+
         SucursalResponse sucursalResponse = sucursalMapper.entidadAResponse(sucursal);
+        List<DetalleVentaResponse> detallesResponse = listaDetalleVentaResponse(detalles);
+        BigDecimal total = calcularTotal(detalles);
 
-        List<DetalleVentaResponse> detallesResponse = detalles.stream()
-                .map(detalle -> detalleVentaMapper.entidadAResponse(detalle, detalle.getProducto()))
-                .toList();
-
-        BigDecimal total = detalles.stream()
-                .map(d -> d.getPrecioProducto().multiply(BigDecimal.valueOf(d.getCantidadProducto())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        return ventaMapper.entidadAResponse(venta, sucursalResponse, detallesResponse, total);
+        return ventaMapper.entidadAResponse(ventaGuardada, sucursalResponse, detallesResponse, total);
     }
 
     @Override
     public void cancelar(Long id) {
-        if(ventaRepository.getById(id)==null)
-            throw new DatoInvalidoException("La venta con id: "+id+" no se encuentra registrada");
-        Venta venta = ventaRepository.getById(id);
+
+        Venta venta = ventaRepository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Venta no encontrada con ID: " + id));
+
         if (venta.getEstadoVenta().equals(EstadoVenta.CANCELADA))
             throw new ConflictoException("La venta que intentas cancelar ya ha sido cancelada antes");
 
@@ -188,4 +171,21 @@ public class VentasServiceImpl implements VentaService {
     public List<ReporteVentasSucursalResponse> reporteVentas() {
         return ventaRepository.obtenerReporteVentasPorSucursal();
     }
+
+    public List<DetalleVentaResponse> listaDetalleVentaResponse(List<DetalleVenta> detalles){
+        return detalles.stream()
+                .map(detalle -> detalleVentaMapper.entidadAResponse(
+                        detalle,
+                        detalle.getProducto()
+                ))
+                .toList();
+    }
+
+    public BigDecimal calcularTotal(List<DetalleVenta> detalles){
+        return detalles.stream()
+                .map(DetalleVenta::calcularSubtotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+
 }
