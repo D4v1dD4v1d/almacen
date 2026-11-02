@@ -171,7 +171,7 @@ public class VentasServiceImpl implements VentaService {
     public List<ReporteVentasSucursalResponse> reporteVentas() {
         return ventaRepository.obtenerReporteVentasPorSucursal();
     }
-
+    //deberían ir en el mapper de ventas
     public List<DetalleVentaResponse> listaDetalleVentaResponse(List<DetalleVenta> detalles){
         return detalles.stream()
                 .map(detalle -> detalleVentaMapper.entidadAResponse(
