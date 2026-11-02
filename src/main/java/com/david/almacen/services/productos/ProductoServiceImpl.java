@@ -5,6 +5,7 @@ import com.david.almacen.dto.productos.ProductoResponse;
 import com.david.almacen.dto.sucursales.SucursalRequest;
 import com.david.almacen.entities.Producto;
 import com.david.almacen.enums.Categoria;
+import com.david.almacen.exceptions.DatoInvalidoException;
 import com.david.almacen.exceptions.RecursoNoEncontradoException;
 import com.david.almacen.mappers.ProductoMapper;
 import com.david.almacen.repositories.ProductoRepository;
@@ -28,7 +29,18 @@ public class ProductoServiceImpl implements ProductoService{
     @Transactional(readOnly = true)
     public List<ProductoResponse> listar(String nombre, String categoria, BigDecimal precioMin, BigDecimal precioMax) {
         log.info("Listando todos los productos");
-        return productoRepository.findAll().stream()
+        if(precioMax!=null && precioMin!=null) {// si ambos precios existen se compara que el min sea menor que el max
+            if (precioMin.compareTo(precioMax) > 0)
+                throw new DatoInvalidoException("El precio minimo no puede ser mayor que el precio máximo");
+        }
+        Categoria cat = null;
+        try {
+            cat =(categoria != null) ? Categoria.obtenerCategoriaPorDescripcion(categoria) : null;
+        }catch (DatoInvalidoException e){
+            log.warn("La categoria: {} no es válida, ese filtro será omitido",categoria);
+        }
+
+        return productoRepository.productoFiltrado(nombre,cat,precioMin,precioMax).stream()
                 .map(productoMapper::entidadAResponse)
                 .toList();
     }
@@ -69,7 +81,6 @@ public class ProductoServiceImpl implements ProductoService{
 
     @Override
     public void eliminar(Long id) {
-
         Producto producto= obtenerProducto(id);
         log.info("Eliminando producto con id: {}", id);
         productoRepository.delete(producto);

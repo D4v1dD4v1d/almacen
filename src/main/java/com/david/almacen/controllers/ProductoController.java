@@ -57,6 +57,7 @@ public class ProductoController {
             @PathVariable @Positive Long id){
         return ResponseEntity.ok(productoService.obtenerPorId(id));
     }
+
     @PostMapping
     @Operation(summary = "Registrar", description = "Registrar un producto")
     @ApiResponse(responseCode = "201",description = "Producto Registrado")
@@ -66,6 +67,8 @@ public class ProductoController {
     public ResponseEntity<ProductoResponse> registrar(@Valid @RequestBody ProductoRequest request){
         return ResponseEntity.status(HttpStatus.CREATED).body(productoService.registrar(request));
     }
+
+
     @PutMapping
     @Operation(summary = "Actualizar", description = "Actualizar un producto")
     @ApiResponse(responseCode = "200", description = "Producto actualizado")

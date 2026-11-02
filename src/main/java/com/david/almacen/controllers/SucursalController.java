@@ -2,7 +2,6 @@ package com.david.almacen.controllers;
 
 import com.david.almacen.dto.sucursales.SucursalRequest;
 import com.david.almacen.dto.sucursales.SucursalResponse;
-import com.david.almacen.entities.Sucursal;
 import com.david.almacen.services.sucursales.SucursalService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -10,9 +9,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.apache.catalina.LifecycleState;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,7 +20,7 @@ import java.util.List;
 @RequestMapping("/api/sucursales")
 @RequiredArgsConstructor
 @Tag(name = "API Sucursales",description = "Géstion de Sucursales")
-public class SucursalControler {
+public class SucursalController {
     private final SucursalService sucursalService;
 
     @GetMapping
@@ -62,7 +59,6 @@ public class SucursalControler {
     ){
         return ResponseEntity.ok(sucursalService.actualizar(request,id));
     }
-
     @DeleteMapping("/{id}")
     @Operation(summary = "Eliminar una Sucursal")
     @ApiResponse(responseCode = "204", description = "Sucursal eliminada")
